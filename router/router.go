@@ -4,6 +4,10 @@ import (
 	"net/http"
 	"os"
 
+	auth "lem-be/auth/handlers"
+	auth_services "lem-be/auth/services"
+	"lem-be/database"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,6 +28,10 @@ func Setup() *gin.Engine {
 		})
 	})
 
+	// Initialize services and handlers
+	loginService := auth_services.NewLoginService(database.GetDB())
+	loginHandler := auth.NewLoginHandler(loginService)
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
@@ -33,6 +41,8 @@ func Setup() *gin.Engine {
 				"message": "pong",
 			})
 		})
+
+		v1.POST("/login", loginHandler.HandleLogin)
 	}
 
 	return router
