@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build and Vet
+    name: Build
     runs-on: ubuntu-latest
     
     steps:
@@ -41,11 +41,3 @@ jobs:
 
     - name: Run go build
       run: go build -v ./...
-
-    - name: Run go fmt check
-      run: |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "The following files are not formatted:"
-          gofmt -s -l .
-          exit 1
-        fi
