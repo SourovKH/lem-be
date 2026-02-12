@@ -10,6 +10,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -31,10 +32,13 @@ func NewLoginService(db *mongo.Database) LoginService {
 }
 
 func (s *LoginServiceImpl) Login(ctx context.Context, req models.LoginRequest) (models.LoginResponse, error) {
+	ctx, span := otel.Tracer("login-service").Start(ctx, "Login")
+	defer span.End()
+
 	// Get users collection
 	usersCollection := s.db.Collection("users")
 
-	log := utils.NewLogger("LoginService", "Login")
+	log := utils.NewLogger("LoginService", "Login").WithContext(ctx)
 	// Find user by email
 	var user models.User
 	err := usersCollection.FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)

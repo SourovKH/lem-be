@@ -14,6 +14,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 )
 
 type GoogleService interface {
@@ -29,9 +31,10 @@ func NewGoogleService(db mongo.Database) GoogleService {
 }
 
 func (service *googleService) HandleGoogleCallback(c *gin.Context) (user models.User, accessToken string, refreshToken string, err error) {
-	// 1. Verify state (skipped for brevity, but essential for production)
-	
-	log := utils.NewLogger("GoogleService", "HandleGoogleCallback")
+	ctx, span := otel.Tracer("google-service").Start(c.Request.Context(), "HandleGoogleCallback")
+	defer span.End()
+
+	log := utils.NewLogger("GoogleService", "HandleGoogleCallback").WithContext(ctx)
 	// 2. Exchange code for token
 	code := c.Query("code")
 	token, err := utils.GoogleOAuthConfig.Exchange(context.Background(), code)
@@ -42,8 +45,11 @@ func (service *googleService) HandleGoogleCallback(c *gin.Context) (user models.
 	}
 	log.Info("Successfully exchanged OAuth2 code for token")
 
-	// 3. Fetch user info from Google
-	resp, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	// 3. Fetch user info from Google using instrumented HTTP client
+	httpClient := &http.Client{
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
+	resp, err := httpClient.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
 	if err != nil {
 		log.Errorf("Failed to fetch user info from Google: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user info", "details": err.Error()})

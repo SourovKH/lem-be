@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/otel"
 )
 
 type PasswordResetService interface {
@@ -33,7 +34,10 @@ func NewPasswordResetService(db mongo.Database) PasswordResetService {
 
 // HandleForgotPassword generates an OTP and sends it via email
 func (h *passwordResetService) ForgotPassword(c *gin.Context, req models.ForgotPasswordRequest) error {
-	log := utils.NewLogger("PasswordResetService", "ForgotPassword")
+	ctx, span := otel.Tracer("password-reset-service").Start(c.Request.Context(), "ForgotPassword")
+	defer span.End()
+
+	log := utils.NewLogger("PasswordResetService", "ForgotPassword").WithContext(ctx)
 	// 1. Verify user exists and is a local user
 	usersCollection := h.db.Collection("users")
 	var user models.User
@@ -86,8 +90,11 @@ func (h *passwordResetService) ForgotPassword(c *gin.Context, req models.ForgotP
 
 // HandleVerifyOTP checks if the code is valid and issues a reset token
 func (h *passwordResetService) VerifyOTP(c *gin.Context, req models.VerifyOTPRequest) (string, error) {
+	ctx, span := otel.Tracer("password-reset-service").Start(c.Request.Context(), "VerifyOTP")
+	defer span.End()
+
 	var otpRecord models.OTPRecord
-	log := utils.NewLogger("PasswordResetService", "VerifyOTP")
+	log := utils.NewLogger("PasswordResetService", "VerifyOTP").WithContext(ctx)
 	err := h.db.Collection("otps").FindOne(context.Background(), bson.M{
 		"email": req.Email,
 		"code":  req.Code,
@@ -116,8 +123,11 @@ func (h *passwordResetService) VerifyOTP(c *gin.Context, req models.VerifyOTPReq
 
 // HandleResetPassword updates the user's password in the database
 func (h *passwordResetService) ResetPassword(c *gin.Context, req models.ResetPasswordRequest) error {
+	ctx, span := otel.Tracer("password-reset-service").Start(c.Request.Context(), "ResetPassword")
+	defer span.End()
+
 	// 1. Verify Reset Token
-	log := utils.NewLogger("PasswordResetService", "ResetPassword")
+	log := utils.NewLogger("PasswordResetService", "ResetPassword").WithContext(ctx)
 	claims, err := utils.ValidateToken(req.ResetToken)
 	if err != nil || claims.Role != "reset_only" {
 		log.Warnf("Invalid or expired reset token: %s", req.ResetToken)

@@ -29,5 +29,14 @@ services:
     depends_on:
       - mongodb
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: auth-server-jaeger
+    restart: always
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317"   # OTLP gRPC collector
+      - "4318:4318"   # OTLP HTTP collector
+
 volumes:
   mongodb_data:

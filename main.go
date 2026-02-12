@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"lem-be/database"
@@ -12,13 +13,25 @@ import (
 )
 
 func main() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		// We don't have the logger yet, so we use standard log here or just ignore if it's fine
+	}
+
 	// Initialize Global Logger
 	utils.InitLogger("AuthServer", "Main")
 	log := utils.NewLogger("AuthServer", "Main")
 
-	// Load environment variables from .env file
-	if err := godotenv.Load(); err != nil {
-		log.Warn("No .env file found, using system environment variables")
+	// Initialize Tracer
+	shutdown, err := utils.InitTracer()
+	if err != nil {
+		log.Errorf("Failed to initialize tracer: %v", err)
+	} else {
+		defer func() {
+			if err := shutdown(context.Background()); err != nil {
+				log.Errorf("Error shutting down tracer: %v", err)
+			}
+		}()
 	}
 
 	// Initialize MongoDB connection

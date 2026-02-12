@@ -24,7 +24,7 @@ func NewGoogleHandler(googleService services.GoogleService) GoogleHandler {
 
 // HandleGoogleLogin redirects the user to Google's OAuth2 login page
 func (h *googleHandler) HandleGoogleLogin(c *gin.Context) {
-	log := utils.NewLogger("GoogleHandler", "HandleGoogleLogin")
+	log := utils.NewLogger("GoogleHandler", "HandleGoogleLogin").WithContext(c.Request.Context())
 	// In production, use a secure random state and store it in session/cookie to prevent CSRF
 	state := "random-state"
 	url := utils.GoogleOAuthConfig.AuthCodeURL(state)
@@ -34,7 +34,7 @@ func (h *googleHandler) HandleGoogleLogin(c *gin.Context) {
 
 // HandleGoogleCallback handles the callback from Google, fetches user info, and issues a JWT
 func (h *googleHandler) HandleGoogleCallback(c *gin.Context) {
-	log := utils.NewLogger("GoogleHandler", "HandleGoogleCallback")
+	log := utils.NewLogger("GoogleHandler", "HandleGoogleCallback").WithContext(c.Request.Context())
 	user, accessToken, refreshToken, err := h.googleService.HandleGoogleCallback(c)
 	if err != nil {
 		log.Errorf("Failed to handle Google callback: %v", err)

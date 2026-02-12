@@ -11,6 +11,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.opentelemetry.io/otel"
 )
 
 // InitSuperuser checks for an existing super_admin and creates one if it doesn't exist
@@ -20,7 +21,10 @@ func InitSuperuser(db *mongo.Database) error {
 
 	usersCollection := db.Collection("users")
 
-	log := utils.NewLogger("BootstrapService", "InitSuperuser")
+	ctx, span := otel.Tracer("bootstrap-service").Start(ctx, "InitSuperuser")
+	defer span.End()
+
+	log := utils.NewLogger("BootstrapService", "InitSuperuser").WithContext(ctx)
 	// Check if any super_admin exists
 	var existingSuperAdmin models.User
 	err := usersCollection.FindOne(ctx, bson.M{"role": constants.RoleSuperAdmin}).Decode(&existingSuperAdmin)

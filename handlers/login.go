@@ -26,7 +26,7 @@ func NewLoginHandler(loginService services.LoginService) Login {
 // HandleLogin is the Gin HTTP handler that adapts the business logic to Gin's handler format
 func (h LoginHandler) HandleLogin(c *gin.Context) {
 	var req models.LoginRequest
-	log := utils.NewLogger("LoginHandler", "HandleLogin")
+	log := utils.NewLogger("LoginHandler", "HandleLogin").WithContext(c.Request.Context())
 	
 	// Bind and validate the JSON request body
 	if err := c.ShouldBindJSON(&req); err != nil {

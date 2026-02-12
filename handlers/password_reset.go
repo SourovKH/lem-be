@@ -29,7 +29,7 @@ func NewPasswordResetHandler(passwordResetService services.PasswordResetService)
 
 func (h *passwordResetHandler) HandleForgotPassword(c *gin.Context) {
 	var req models.ForgotPasswordRequest
-	log := utils.NewLogger("PasswordResetHandler", "HandleForgotPassword")
+	log := utils.NewLogger("PasswordResetHandler", "HandleForgotPassword").WithContext(c.Request.Context())
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Warnf("Invalid email address: %v", err)
@@ -53,7 +53,7 @@ func (h *passwordResetHandler) HandleForgotPassword(c *gin.Context) {
 
 func (h *passwordResetHandler) HandleVerifyOTP(c *gin.Context) {
 	var req models.VerifyOTPRequest
-	log := utils.NewLogger("PasswordResetHandler", "HandleVerifyOTP")
+	log := utils.NewLogger("PasswordResetHandler", "HandleVerifyOTP").WithContext(c.Request.Context())
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Warnf("Invalid request body: %v", err)
@@ -78,7 +78,7 @@ func (h *passwordResetHandler) HandleVerifyOTP(c *gin.Context) {
 // HandleResetPassword updates the user's password in the database
 func (h *passwordResetHandler) HandleResetPassword(c *gin.Context) {
 	var req models.ResetPasswordRequest
-	log := utils.NewLogger("PasswordResetHandler", "HandleResetPassword")
+	log := utils.NewLogger("PasswordResetHandler", "HandleResetPassword").WithContext(c.Request.Context())
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Warnf("Invalid request body: %v", err)

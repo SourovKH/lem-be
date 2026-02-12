@@ -9,6 +9,7 @@ import (
 	"lem-be/services"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 // Setup initializes and returns the Gin router with all routes configured
@@ -19,6 +20,14 @@ func Setup() *gin.Engine {
 	}
 
 	router := gin.Default()
+
+	// Add OpenTelemetry middleware FIRST before any routes
+	serviceName := os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "auth-server"
+	}
+	router.Use(otelgin.Middleware(serviceName))
+	router.Use(TraceLogger())
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
