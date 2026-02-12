@@ -34,30 +34,36 @@ func (s *LoginServiceImpl) Login(ctx context.Context, req models.LoginRequest) (
 	// Get users collection
 	usersCollection := s.db.Collection("users")
 
+	log := utils.NewLogger("LoginService", "Login")
 	// Find user by email
 	var user models.User
 	err := usersCollection.FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
+			log.Warnf("User not found for email %s", req.Email)
 			return models.LoginResponse{}, ErrUserNotFound
 		}
+		log.Errorf("Database error during user lookup for email %s: %v", req.Email, err)
 		return models.LoginResponse{}, err
 	}
 
 	// Verify password
 	if !utils.ComparePasswords(user.Password, req.Password) {
+		log.Warnf("Invalid password attempt for email %s", req.Email)
 		return models.LoginResponse{}, ErrInvalidPassword
 	}
 
 	// Generate access token
 	accessToken, err := utils.GenerateAccessToken(user.ID.Hex(), user.Email, user.Role)
 	if err != nil {
+		log.Errorf("Failed to generate access token for email %s: %v", req.Email, err)
 		return models.LoginResponse{}, ErrTokenGeneration
 	}
 
 	// Generate refresh token
 	refreshToken, err := utils.GenerateRefreshToken(user.ID.Hex())
 	if err != nil {
+		log.Errorf("Failed to generate refresh token for email %s: %v", req.Email, err)
 		return models.LoginResponse{}, ErrTokenGeneration
 	}
 

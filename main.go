@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"lem-be/database"
@@ -13,27 +12,32 @@ import (
 )
 
 func main() {
+	// Initialize Global Logger
+	utils.InitLogger("AuthServer", "Main")
+	log := utils.NewLogger("AuthServer", "Main")
+
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+		log.Warn("No .env file found, using system environment variables")
 	}
 
 	// Initialize MongoDB connection
 	if err := database.Init(); err != nil {
-		log.Fatal("Failed to initialize MongoDB:", err)
+		log.Errorf("Failed to initialize MongoDB: %v", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := database.Close(); err != nil {
-			log.Printf("Error disconnecting from MongoDB: %v", err)
+			log.Errorf("Error disconnecting from MongoDB: %v", err)
 		}
 	}()
 
 	// Bootstrap superuser
-	log.Println("Bootstrapping superuser...")	
+	log.Info("Bootstrapping superuser...")	
 	if err := services.InitSuperuser(database.GetDB()); err != nil {
-		log.Printf("Error bootstrapping superuser: %v", err)
+		log.Errorf("Error bootstrapping superuser: %v", err)
 	}
-	log.Println("Superuser bootstrapped successfully")
+	log.Info("Superuser bootstrapped successfully")
 
 	// Initialize OAuth2 config
 	utils.InitOAuthConfig()
@@ -48,8 +52,9 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Server starting on port %s", port)
+	log.Infof("Server starting on port %s", port)
 	if err := r.Run(":" + port); err != nil {
-		log.Fatal("Failed to start server:", err)
+		log.Errorf("Failed to start server: %v", err)
+		os.Exit(1)
 	}
 }

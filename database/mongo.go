@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"log"
+	"lem-be/utils"
 	"os"
 	"time"
 
@@ -41,7 +41,7 @@ func Init() error {
 		return err
 	}
 
-	log.Println("Successfully connected to MongoDB")
+	utils.NewLogger("Database", "Init").Info("Successfully connected to MongoDB")
 
 	Client = client
 	
@@ -64,7 +64,7 @@ func Close() error {
 		if err := Client.Disconnect(ctx); err != nil {
 			return err
 		}
-		log.Println("Successfully disconnected from MongoDB")
+		utils.NewLogger("Database", "Close").Info("Successfully disconnected from MongoDB")
 	}
 	return nil
 }

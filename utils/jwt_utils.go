@@ -22,6 +22,7 @@ type JWTClaims struct {
 func GetJWTSecret() (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
+		NewLogger("JWTUtils", "GetJWTSecret").Errorf("JWT_SECRET environment variable is not set")
 		return "", errors.New("JWT_SECRET environment variable is not set")
 	}
 	return secret, nil
@@ -71,6 +72,7 @@ func GenerateRefreshToken(userID string) (string, error) {
 func ValidateToken(tokenString string) (*JWTClaims, error) {
 	secret, err := GetJWTSecret()
 	if err != nil {
+		NewLogger("JWTUtils", "ValidateToken").Errorf("Failed to get JWT secret: %v", err)
 		return nil, err
 	}
 
@@ -79,6 +81,7 @@ func ValidateToken(tokenString string) (*JWTClaims, error) {
 	})
 
 	if err != nil {
+		NewLogger("JWTUtils", "ValidateToken").Warnf("Token parsing failed: %v", err)
 		return nil, err
 	}
 

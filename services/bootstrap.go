@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
 
@@ -21,11 +20,12 @@ func InitSuperuser(db *mongo.Database) error {
 
 	usersCollection := db.Collection("users")
 
+	log := utils.NewLogger("BootstrapService", "InitSuperuser")
 	// Check if any super_admin exists
 	var existingSuperAdmin models.User
 	err := usersCollection.FindOne(ctx, bson.M{"role": constants.RoleSuperAdmin}).Decode(&existingSuperAdmin)
 	if err == nil {
-		log.Println("Superuser already exists.")
+		log.Info("Superuser already exists")
 		return nil
 	}
 
@@ -38,7 +38,7 @@ func InitSuperuser(db *mongo.Database) error {
 	password := os.Getenv("SUPERUSER_PASSWORD")
 
 	if email == "" || password == "" {
-		log.Println("WARNING: SUPERUSER_EMAIL or SUPERUSER_PASSWORD not set. Skipping superuser bootstrap.")
+		log.Warn("SUPERUSER_EMAIL or SUPERUSER_PASSWORD not set. Skipping superuser bootstrap.")
 		return nil
 	}
 
@@ -60,6 +60,6 @@ func InitSuperuser(db *mongo.Database) error {
 		return err
 	}
 
-	log.Printf("Successfully bootstrapped superuser: %s\n", email)
+	log.Infof("Successfully bootstrapped superuser with email %s", email)
 	return nil
 }

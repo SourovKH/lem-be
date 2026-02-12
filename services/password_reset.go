@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 	"time"
 
@@ -34,16 +33,19 @@ func NewPasswordResetService(db mongo.Database) PasswordResetService {
 
 // HandleForgotPassword generates an OTP and sends it via email
 func (h *passwordResetService) ForgotPassword(c *gin.Context, req models.ForgotPasswordRequest) error {
+	log := utils.NewLogger("PasswordResetService", "ForgotPassword")
 	// 1. Verify user exists and is a local user
 	usersCollection := h.db.Collection("users")
 	var user models.User
 	err := usersCollection.FindOne(context.Background(), bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
+		log.Warnf("User not found for password reset (email: %s)", req.Email)
 		// Security: Don't reveal if email exists or not, just return 200
 		return errors.New("If an account exists, an OTP has been sent.")
 	}
 
 	if user.Provider != "" && user.Provider != "local" {
+		log.Warnf("Attempted password reset for non-local user (email: %s, provider: %s)", req.Email, user.Provider)
 		return errors.New("This account uses social login. Please use the social provider to sign in.")
 	}
 
@@ -66,13 +68,17 @@ func (h *passwordResetService) ForgotPassword(c *gin.Context, req models.ForgotP
 	)
 
 	if err != nil {
+		log.Errorf("Failed to store OTP in database for email %s: %v", req.Email, err)
 		return errors.New("Failed to store OTP")
 	}
+	log.Infof("Successfully stored OTP for email %s", req.Email)
 
 	// 4. Send Email
 	if err := utils.SendOTPEmail(req.Email, otp); err != nil {
-		log.Printf("Email error: %v", err)
+		log.Errorf("Failed to send OTP email to %s: %v", req.Email, err)
 		// Don't fail the request, just log it. In dev, we can see the code in logs.
+	} else {
+		log.Infof("OTP email sent successfully to %s", req.Email)
 	}
 
 	return nil
@@ -81,6 +87,7 @@ func (h *passwordResetService) ForgotPassword(c *gin.Context, req models.ForgotP
 // HandleVerifyOTP checks if the code is valid and issues a reset token
 func (h *passwordResetService) VerifyOTP(c *gin.Context, req models.VerifyOTPRequest) (string, error) {
 	var otpRecord models.OTPRecord
+	log := utils.NewLogger("PasswordResetService", "VerifyOTP")
 	err := h.db.Collection("otps").FindOne(context.Background(), bson.M{
 		"email": req.Email,
 		"code":  req.Code,
@@ -88,6 +95,7 @@ func (h *passwordResetService) VerifyOTP(c *gin.Context, req models.VerifyOTPReq
 	}).Decode(&otpRecord)
 
 	if err != nil {
+		log.Warnf("Invalid or expired OTP attempt for email %s", req.Email)
 		return "", errors.New("Invalid or expired OTP")
 	}
 
@@ -99,6 +107,7 @@ func (h *passwordResetService) VerifyOTP(c *gin.Context, req models.VerifyOTPReq
 	// For now, let's just generate a standard token that identifies the user
 	token, err := utils.GenerateAccessToken("RESET:"+req.Email, req.Email, "reset_only")
 	if err != nil {
+		log.Errorf("Failed to generate reset token for email %s: %v", req.Email, err)
 		return "", errors.New("Failed to generate reset token")
 	}
 
@@ -108,8 +117,10 @@ func (h *passwordResetService) VerifyOTP(c *gin.Context, req models.VerifyOTPReq
 // HandleResetPassword updates the user's password in the database
 func (h *passwordResetService) ResetPassword(c *gin.Context, req models.ResetPasswordRequest) error {
 	// 1. Verify Reset Token
+	log := utils.NewLogger("PasswordResetService", "ResetPassword")
 	claims, err := utils.ValidateToken(req.ResetToken)
 	if err != nil || claims.Role != "reset_only" {
+		log.Warnf("Invalid or expired reset token: %s", req.ResetToken)
 		return errors.New("Invalid or expired reset token")
 	}
 
@@ -127,8 +138,10 @@ func (h *passwordResetService) ResetPassword(c *gin.Context, req models.ResetPas
 	)
 
 	if err != nil {
+		log.Errorf("Failed to update password in database for email %s: %v", claims.Email, err)
 		return errors.New("Failed to update password")
 	}
+	log.Infof("Password updated successfully in database for email %s", claims.Email)
 
 	return nil
 }

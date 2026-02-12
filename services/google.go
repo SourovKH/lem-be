@@ -31,17 +31,21 @@ func NewGoogleService(db mongo.Database) GoogleService {
 func (service *googleService) HandleGoogleCallback(c *gin.Context) (user models.User, accessToken string, refreshToken string, err error) {
 	// 1. Verify state (skipped for brevity, but essential for production)
 	
+	log := utils.NewLogger("GoogleService", "HandleGoogleCallback")
 	// 2. Exchange code for token
 	code := c.Query("code")
 	token, err := utils.GoogleOAuthConfig.Exchange(context.Background(), code)
 	if err != nil {
+		log.Errorf("Failed to exchange token: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token", "details": err.Error()})
 		return
 	}
+	log.Info("Successfully exchanged OAuth2 code for token")
 
 	// 3. Fetch user info from Google
 	resp, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
 	if err != nil {
+		log.Errorf("Failed to fetch user info from Google: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user info", "details": err.Error()})
 		return
 	}
@@ -53,9 +57,11 @@ func (service *googleService) HandleGoogleCallback(c *gin.Context) (user models.
 		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		log.Errorf("Failed to decode Google user info: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode user info", "details": err.Error()})
 		return models.User{}, "", "", err
 	}
+	log.Infof("Fetched Google user info for email %s", googleUser.Email)
 
 	// 4. Upsert user in MongoDB
 	usersCollection := service.db.Collection("users")
@@ -77,9 +83,11 @@ func (service *googleService) HandleGoogleCallback(c *gin.Context) (user models.
 
 	_, err = usersCollection.UpdateOne(context.Background(), filter, update, opts)
 	if err != nil {
+		log.Errorf("Failed to upsert user in MongoDB for email %s: %v", googleUser.Email, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
 		return
 	}
+	log.Infof("User upserted successfully for email %s", googleUser.Email)
 
 	// Fetch the user to get their ID and Role (especially if they were just created)
 	err = usersCollection.FindOne(context.Background(), filter).Decode(&user)

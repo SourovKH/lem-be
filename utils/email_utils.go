@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"log"
 	"os"
 	"strconv"
 
@@ -17,7 +16,7 @@ func SendOTPEmail(to, code string) error {
 
 	// Fallback for development if not set
 	if host == "" {
-		log.Println("WARNING: SMTP_HOST not set. Email not sent. OTP Code:", code)
+		NewLogger("EmailUtils", "SendOTPEmail").Warnf("SMTP_HOST not set. Email not sent to %s.", to)
 		return nil
 	}
 
@@ -35,6 +34,7 @@ func SendOTPEmail(to, code string) error {
 	d := gomail.NewDialer(host, port, user, pass)
 
 	if err := d.DialAndSend(m); err != nil {
+		NewLogger("EmailUtils", "SendOTPEmail").Errorf("Failed to send email to %s: %v", to, err)
 		return err
 	}
 
