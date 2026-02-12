@@ -1,0 +1,21 @@
+package auth_models
+
+import (
+	"time"
+
+	auth_constants "lem-be/constants"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// User represents a user in the system
+type User struct {
+	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Email      string             `bson:"email" json:"email"`
+	Password   string             `bson:"password,omitempty" json:"-"` // Optional for OAuth users
+	Role       auth_constants.Role     `bson:"role" json:"role"`
+	Provider   string             `bson:"provider" json:"provider"`       // e.g., "google", "local"
+	ProviderID string             `bson:"provider_id" json:"provider_id"` // e.g., Google Subject ID
+	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt  time.Time          `bson:"updated_at" json:"updated_at"`
+}

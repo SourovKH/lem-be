@@ -4,10 +4,10 @@ import (
 	"log"
 	"os"
 
-	auth_services "lem-be/auth/services"
-	auth_utils "lem-be/auth/utils"
 	"lem-be/database"
 	"lem-be/router"
+	"lem-be/services"
+	"lem-be/utils"
 
 	"github.com/joho/godotenv"
 )
@@ -30,13 +30,13 @@ func main() {
 
 	// Bootstrap superuser
 	log.Println("Bootstrapping superuser...")	
-	if err := auth_services.InitSuperuser(database.GetDB()); err != nil {
+	if err := services.InitSuperuser(database.GetDB()); err != nil {
 		log.Printf("Error bootstrapping superuser: %v", err)
 	}
 	log.Println("Superuser bootstrapped successfully")
 
 	// Initialize OAuth2 config
-	auth_utils.InitOAuthConfig()
+	utils.InitOAuthConfig()
 
 	// Initialize Gin router
 	r := router.Setup()

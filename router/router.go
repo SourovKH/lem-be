@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"os"
 
-	auth "lem-be/auth/handlers"
-	auth_services "lem-be/auth/services"
 	"lem-be/database"
 
 	"github.com/gin-gonic/gin"
